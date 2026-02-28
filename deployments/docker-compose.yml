@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: auth-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: auth_db
+    volumes:
+      - auth-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  auth-postgres-data:
