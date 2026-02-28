@@ -5,6 +5,7 @@ import (
 	"github.com/loc-ne/go-auction/services/auth/internal/entity"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"github.com/loc-ne/go-auction/shared/pkg"
 )
 var (
     ErrUserAlreadyExists  = errors.New("user already exists")
@@ -12,13 +13,13 @@ var (
 )
 
 type UserRepository interface {
-    Create(user *entity.User) error
-	GetByEmail(email string) (*entity.User, error)
+    Create(ctx context.Context, user *entity.User) error
+	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 }
 
 type UserUsecase interface {
-	Register(fullName, email, password string) error
-	Login(email string, password string) (*entity.User, error)
+	Register(ctx context.Context, fullName, email, password string) error
+	Login(ctx context.Context, email string, password string) (*entity.User, error)
 }
 
 type userUsecase struct {
@@ -29,8 +30,8 @@ func NewUserUsecase(r UserRepository) UserUsecase {
     return &userUsecase{repo: r}
 }
 
-func (u *userUsecase) Register(fullName, email, password string) error {
-	user, err := u.repo.GetByEmail(email)
+func (u *userUsecase) Register(ctx context.Context, fullName, email, password string) error {
+	user, err := u.repo.GetByEmail(ctx, email)
 	if err != nil {
 		return err
 	}	
@@ -51,8 +52,8 @@ func (u *userUsecase) Register(fullName, email, password string) error {
 	return u.repo.Create(newUser)
 }
 
-func (u *userUsecase) Login(email string, password string) (*entity.User, error) {
-	user, err := u.repo.GetByEmail(email)
+func (u *userUsecase) Login(ctx context.Context, email string, password string) (*entity.User, error) {
+	user, err := u.repo.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}	
