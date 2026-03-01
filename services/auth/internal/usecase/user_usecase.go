@@ -21,6 +21,7 @@ type UserRepository interface {
 type UserUsecase interface {
 	Register(ctx context.Context, fullName, email, password string) error
 	Login(ctx context.Context, email string, password string) (*entity.User, string, string, error)
+	GetUser(ctx context.Context, email string) (*entity.User, error)
 }
 
 type userUsecase struct {
@@ -76,4 +77,12 @@ func (u *userUsecase) Login(ctx context.Context, email string, password string) 
     }
     
     return user, accessToken, refreshToken, nil
+}
+
+func (u *userUsecase) GetUser(ctx context.Context, email string) (*entity.User, error) {
+	user, err := u.repo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

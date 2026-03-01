@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"net/http"
-
 	"github.com/joho/godotenv"
-	"github.com/loc-ne/go-auction/services/api-gateway/config"
+	"github.com/loc-ne/go-auction/services/api-gateway/internal/config"
+	"github.com/loc-ne/go-auction/services/api-gateway/internal/gateway"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 		log.Fatal("Failed to load config:", err)
 	}
 
-	r := NewRouter(cfg)
+	r := gateway.NewRouter(cfg)
 
 	port := cfg.Port
 	

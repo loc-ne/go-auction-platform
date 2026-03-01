@@ -3,14 +3,16 @@ package main
 import (
     "context"
     "log"
+    "os"
+    
     "github.com/loc-ne/go-auction/services/auth/migrations" 
     "github.com/loc-ne/go-auction/services/auth/internal/repository/postgres" 
     "github.com/loc-ne/go-auction/services/auth/internal/usecase" 
     "github.com/loc-ne/go-auction/services/auth/internal/delivery/http" 
+    "github.com/loc-ne/go-auction/services/auth/internal/delivery/http/middleware" 
     "github.com/gin-gonic/gin"
-    "os"
     "github.com/joho/godotenv"
-    )
+)
 
 func main() {
     log.Println("Starting Auth Service...")
@@ -35,8 +37,17 @@ func main() {
     handler := http.NewUserHandler(userUC, sessionUC)
 
     router := gin.Default()
-    router.POST("/register", handler.Register)
-    router.POST("/login", handler.Login)
+    authGroup := router.Group("/api/v1/auth")
+    {
+        authGroup.POST("/login", handler.Login)
+        authGroup.POST("/register", handler.Register)
+        
+        protected := authGroup.Use(middleware.AuthMiddleware(secret))
+        {
+            protected.GET("/me", handler.Me)
+           // protected.POST("/logout", handler.Logout)
+        }
+    }
 
     router.Run(":8001")
     

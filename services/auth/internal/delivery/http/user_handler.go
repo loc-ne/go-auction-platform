@@ -3,7 +3,6 @@ package http
 import (
 	"errors"
     "net/http"
-    "fmt"
     "time"
     "github.com/gin-gonic/gin" 
     "github.com/loc-ne/go-auction/services/auth/internal/usecase"
@@ -79,5 +78,29 @@ func (h *UserHandler) Login(c *gin.Context) {
 
     c.SetCookie("access_token", accessToken, 60*60*24*7, "/", "", false, true)
     c.SetCookie("refresh_token", refreshToken, 60*60*24*30, "/", "", false, true)
-    c.JSON(http.StatusOK, gin.H{"message": "Login successfully", "data": gin.H{"access_token": accessToken, "refresh_token": refreshToken}})
+    c.JSON(http.StatusOK, gin.H{"success": true, "message": "Login successfully", "data": gin.H{"access_token": accessToken, "refresh_token": refreshToken}})
+}
+
+func (h *UserHandler) Me(c *gin.Context) {
+    email, exists := c.Get("email")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Unauthorized"})
+        return
+    }
+
+    ctx := c.Request.Context()
+    user, err := h.userUsecase.GetUser(ctx, email.(string))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Failed to retrieve user information"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "user": gin.H{
+            "email":     user.Email,
+            "fullName":  user.FullName,
+            "role":      user.Role,
+        },
+    })
 }

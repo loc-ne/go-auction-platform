@@ -94,6 +94,8 @@ export default function LoginModal({ isOpen, onClose, onRegisterClick }: { isOpe
                             </div>
                             <input
                                 type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Mật khẩu"
                                 className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500 transition-all font-medium placeholder-gray-400"
                                 required
