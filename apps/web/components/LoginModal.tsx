@@ -1,7 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginModal({ isOpen, onClose, onRegisterClick }: { isOpen: boolean; onClose: () => void; onRegisterClick?: () => void }) {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const { refreshUser } = useAuth();
+
     if (!isOpen) return null;
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include',
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                await refreshUser();
+                onClose();
+            } else {
+                setError(data.message || 'Đăng nhập thất bại.');
+            }
+        } catch (err) {
+            setError('Đã có lỗi xảy ra. Mời thử lại sau.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -23,7 +60,12 @@ export default function LoginModal({ isOpen, onClose, onRegisterClick }: { isOpe
                     Chào mừng trở lại!
                 </h2>
 
-                <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); onClose(); }}>
+                <form className="space-y-5" onSubmit={handleLogin}>
+                    {error && (
+                        <div className="p-3 mb-4 text-sm text-red-500 bg-red-100/50 dark:bg-red-500/10 border border-red-500/20 rounded-xl">
+                            {error}
+                        </div>
+                    )}
                     <div className="space-y-1.5">
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -37,6 +79,8 @@ export default function LoginModal({ isOpen, onClose, onRegisterClick }: { isOpe
                                 placeholder="Email của bạn"
                                 className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-indigo-500 transition-all font-medium placeholder-gray-400"
                                 required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                         </div>
                     </div>
@@ -73,9 +117,17 @@ export default function LoginModal({ isOpen, onClose, onRegisterClick }: { isOpe
 
                     <button
                         type="submit"
-                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-extrabold text-base rounded-xl transition-all shadow-lg shadow-blue-500/30 dark:shadow-indigo-500/25 active:scale-95 mt-4"
+                        disabled={isLoading}
+                        className={`w-full py-4 text-white font-extrabold text-base rounded-xl transition-all shadow-lg active:scale-95 mt-4 flex justify-center items-center ${isLoading
+                            ? 'bg-blue-400 dark:bg-indigo-400 cursor-not-allowed shadow-none'
+                            : 'bg-blue-600 hover:bg-blue-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 shadow-blue-500/30 dark:shadow-indigo-500/25'
+                            }`}
                     >
-                        Đăng nhập
+                        {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                            'Đăng nhập'
+                        )}
                     </button>
                 </form>
 
