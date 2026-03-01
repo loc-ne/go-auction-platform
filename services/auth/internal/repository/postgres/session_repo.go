@@ -20,11 +20,11 @@ func NewSessionRepository(db *pgxpool.Pool) *sessionRepo {
 
 func (r *sessionRepo) Create(ctx context.Context, s *entity.Session) error {
     sql := `
-        INSERT INTO sessions (user_id, refresh_token, user_agent, client_ip, expires_at) 
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING id, created_at`
+        INSERT INTO sessions (id, user_id, refresh_token, user_agent, client_ip, expires_at) 
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING created_at`
     
-    err := r.db.QueryRow(ctx, sql, s.UserID, s.RefreshToken, s.UserAgent, s.ClientIP, s.ExpiresAt).Scan(&s.ID, &s.CreatedAt)
+    err := r.db.QueryRow(ctx, sql, s.ID, s.UserID, s.RefreshToken, s.UserAgent, s.ClientIP, s.ExpiresAt).Scan(&s.CreatedAt)
     return err
 }
 

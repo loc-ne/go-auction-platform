@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"errors"
 	"github.com/loc-ne/go-auction/services/auth/internal/entity"
 	"golang.org/x/crypto/bcrypt"
@@ -19,17 +20,20 @@ type UserRepository interface {
 
 type UserUsecase interface {
 	Register(ctx context.Context, fullName, email, password string) error
-	Login(ctx context.Context, email string, password string) (*entity.User, error)
+	Login(ctx context.Context, email string, password string) (*entity.User, string, string, error)
 }
 
 type userUsecase struct {
     repo UserRepository 
+	jwtSecret string
 }
 
-func NewUserUsecase(r UserRepository) UserUsecase {
-    return &userUsecase{repo: r}
+func NewUserUsecase(r UserRepository, jwtSecret string) UserUsecase {
+    return &userUsecase{
+        repo:      r,
+        jwtSecret: jwtSecret, 
+    }
 }
-
 func (u *userUsecase) Register(ctx context.Context, fullName, email, password string) error {
 	user, err := u.repo.GetByEmail(ctx, email)
 	if err != nil {
@@ -49,21 +53,27 @@ func (u *userUsecase) Register(ctx context.Context, fullName, email, password st
         PasswordHash: string(passwordHash),
 		FullName:     fullName,
     }
-	return u.repo.Create(newUser)
+	return u.repo.Create(ctx, newUser)
 }
 
-func (u *userUsecase) Login(ctx context.Context, email string, password string) (*entity.User, error) {
+func (u *userUsecase) Login(ctx context.Context, email string, password string) (*entity.User, string, string, error) {
 	user, err := u.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, err
-	}	
+        return nil, "", "", err
+    }
 	if user != nil {
 		err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 		if err != nil {
-			return nil, ErrInvalidCredentials
+			return nil, "", "", ErrInvalidCredentials
 		}	
 	} else {
-		return nil, ErrInvalidCredentials
+		return nil, "", "", ErrInvalidCredentials
 	}
-	return user, nil
+	
+	accessToken, refreshToken, err := pkg.GenerateTokens(ctx, user.ID.String(), user.Email, u.jwtSecret)
+    if err != nil {
+        return nil, "", "", err
+    }
+    
+    return user, accessToken, refreshToken, nil
 }

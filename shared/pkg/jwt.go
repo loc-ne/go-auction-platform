@@ -3,7 +3,6 @@ package pkg
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 	"crypto/rand"
 	"encoding/hex"

@@ -35,6 +35,7 @@ func NewSessionUsecase(r SessionRepository) SessionUsecase {
 }
 
 func (u *sessionUsecase) CreateSession(ctx context.Context, session *entity.Session) error {
+	session.ID = uuid.New()
 	return u.repo.Create(ctx, session)
 }
 
