@@ -9,10 +9,14 @@ import (
     "github.com/loc-ne/go-auction/services/auth/internal/delivery/http" 
     "github.com/gin-gonic/gin"
     "os"
+    "github.com/joho/godotenv"
     )
 
 func main() {
     log.Println("Starting Auth Service...")
+    if err := godotenv.Load(); err != nil {
+		log.Println(".env not found")
+	}
     secret := os.Getenv("JWT_SECRET") 
 	
     ctx := context.Background()
@@ -34,6 +38,6 @@ func main() {
     router.POST("/register", handler.Register)
     router.POST("/login", handler.Login)
 
-    router.Run(":8080")
+    router.Run(":8001")
     
 }
