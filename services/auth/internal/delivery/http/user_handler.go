@@ -78,7 +78,12 @@ func (h *UserHandler) Login(c *gin.Context) {
 
     c.SetCookie("access_token", accessToken, 60*60*24*7, "/", "", false, true)
     c.SetCookie("refresh_token", refreshToken, 60*60*24*30, "/", "", false, true)
-    c.JSON(http.StatusOK, gin.H{"success": true, "message": "Login successfully", "data": gin.H{"access_token": accessToken, "refresh_token": refreshToken}})
+    resUser := gin.H{
+        "email":     user.Email,
+        "fullName":  user.FullName,
+        "role":      user.Role,
+    }
+    c.JSON(http.StatusOK, gin.H{"success": true, "message": "Login successfully", "data": gin.H{"access_token": accessToken, "refresh_token": refreshToken, "user": resUser}})
 }
 
 func (h *UserHandler) Me(c *gin.Context) {
