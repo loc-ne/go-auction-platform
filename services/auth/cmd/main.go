@@ -11,14 +11,14 @@ import (
     "github.com/loc-ne/go-auction/services/auth/internal/delivery/http" 
     "github.com/loc-ne/go-auction/services/auth/internal/delivery/http/middleware" 
     "github.com/gin-gonic/gin"
-    "github.com/joho/godotenv"
+    // "github.com/joho/godotenv"
 )
 
 func main() {
-    log.Println("Starting Auth Service...")
-    if err := godotenv.Load(); err != nil {
-		log.Println(".env not found")
-	}
+    // log.Println("Starting Auth Service...")
+    // if err := godotenv.Load(); err != nil {
+	// 	log.Println(".env not found")
+	// }
     secret := os.Getenv("JWT_SECRET") 
 	
     ctx := context.Background()
@@ -49,6 +49,8 @@ func main() {
         }
     }
 
-    router.Run(":8001")
+    port := os.Getenv("AUTH_PORT")
+    log.Printf("Auth Service listening on port %s...\n", port)
+    router.Run(":" + port)
     
 }

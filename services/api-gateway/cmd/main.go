@@ -3,17 +3,17 @@ package main
 import (
 	"log"
 	"net/http"
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 	"github.com/loc-ne/go-auction/services/api-gateway/internal/config"
 	"github.com/loc-ne/go-auction/services/api-gateway/internal/gateway"
 )
 
 func main() {
-	log.Println("Starting API Gateway...")
+	// log.Println("Starting API Gateway...")
 
-	if err := godotenv.Load(); err != nil {
-		log.Println(".env not found")
-	}
+	// if err := godotenv.Load(); err != nil {
+	// 	log.Println(".env not found")
+	// }
 	
 	cfg, err := config.LoadConfig()
 	if err != nil {
