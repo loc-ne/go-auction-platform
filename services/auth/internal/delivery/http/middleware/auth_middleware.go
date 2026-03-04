@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/loc-ne/go-auction/shared/pkg"
@@ -9,16 +10,23 @@ import (
 
 func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenStr, err := c.Cookie("access_token")
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"success": false,
-				"message": "Unauthorized: missing or invalid token",
-			})
-			return
+		var token string
+
+		if cookieToken, err := c.Cookie("access_token"); err == nil {
+			token = cookieToken
 		}
 
-		claims, err := pkg.ValidateToken(tokenStr, jwtSecret)
+		if token == "" {
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" {
+				parts := strings.Split(authHeader, " ")
+				if len(parts) == 2 && parts[0] == "Bearer" {
+					token = parts[1]
+				}
+			}
+		}
+
+		claims, err := pkg.ValidateToken(token, jwtSecret)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"success": false,

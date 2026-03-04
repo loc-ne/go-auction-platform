@@ -5,17 +5,47 @@ import 'package:http/http.dart' as http;
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../models/user_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final String baseUrl;
   final http.Client client;
+  final FlutterSecureStorage secureStorage;
 
-  AuthRepositoryImpl({required this.baseUrl, http.Client? client}) 
-      : client = client ?? http.Client();
+  AuthRepositoryImpl({
+    required this.baseUrl,
+    http.Client? client,
+    this.secureStorage = const FlutterSecureStorage(),
+  }) : client = client ?? http.Client();
+
+  Future<void> _saveTokens(String accessToken, String refreshToken) async {
+    await secureStorage.write(key: 'access_token', value: accessToken);
+    await secureStorage.write(key: 'refresh_token', value: refreshToken);
+  }
 
   @override
   Future<User?> getCurrentUser() async {
-    return null; 
+    try {
+      final token = await secureStorage.read(key: 'access_token');
+      if (token == null) return null;
+
+      final response = await client.get(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        return UserModel.fromJson(responseBody['data']['user']);
+      }
+
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -30,7 +60,9 @@ class AuthRepositoryImpl implements AuthRepository {
       final Map<String, dynamic> responseBody = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        return UserModel.fromJson(responseBody['data']['user']);
+        final data = responseBody['data'];
+        await _saveTokens(data['access_token'], data['refresh_token']);
+        return UserModel.fromJson(data['user']);
       } else {
         throw responseBody['message'] ?? 'Login failed';
       }
