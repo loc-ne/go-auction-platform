@@ -11,6 +11,19 @@ services:
     volumes:
       - auth-postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
+  
+  postgres-product:
+    image: postgres:17-alpine
+    container_name: product-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: product_db
+    volumes:
+      - product-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   auth-service:
     image: golang:1.24-alpine
@@ -46,3 +59,4 @@ services:
 
 volumes:
   auth-postgres-data:
+  product-postgres-data:
