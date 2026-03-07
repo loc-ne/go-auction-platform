@@ -25,6 +25,19 @@ services:
       - product-postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  postgres-bidding:
+    image: postgres:17-alpine
+    container_name: bidding-postgres
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: bidding_db
+    volumes:
+      - bidding-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   auth-service:
     image: golang:1.24-alpine
     container_name: auth-service
@@ -60,3 +73,4 @@ services:
 volumes:
   auth-postgres-data:
   product-postgres-data:
+  bidding-postgres-data:
