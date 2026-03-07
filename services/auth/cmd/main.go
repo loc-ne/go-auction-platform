@@ -9,7 +9,7 @@ import (
     "github.com/loc-ne/go-auction/services/auth/internal/repository/postgres" 
     "github.com/loc-ne/go-auction/services/auth/internal/usecase" 
     "github.com/loc-ne/go-auction/services/auth/internal/delivery/http" 
-    "github.com/loc-ne/go-auction/services/auth/internal/delivery/http/middleware" 
+    "github.com/loc-ne/go-auction/shared/middleware" 
     "github.com/gin-gonic/gin"
     // "github.com/joho/godotenv"
 )

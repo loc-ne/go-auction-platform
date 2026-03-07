@@ -28,7 +28,7 @@ func RunMigrations() {
     //     migrationPath, 
     //     dbUrl,
     // )
-     m, err := migrate.New(
+    m, err := migrate.New(
         "file://migrations", 
         dbUrl,
     )

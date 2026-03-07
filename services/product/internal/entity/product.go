@@ -17,7 +17,7 @@ type Product struct {
 	ImageURLs    []string  `json:"image_urls" db:"image_urls"`
 	StartAt      time.Time `json:"start_at" db:"start_at"`
 	EndAt        time.Time `json:"end_at" db:"end_at"`
-	WinnerID     uuid.UUID `json:"winner_id" db:"winner_id"`
+	WinnerID     uuid.NullUUID `json:"winner_id" db:"winner_id"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
