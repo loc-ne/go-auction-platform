@@ -11,6 +11,7 @@ import (
 	"github.com/loc-ne/go-auction/services/bidding/internal/usecase"
 	"github.com/loc-ne/go-auction/services/bidding/migrations"
 	"github.com/loc-ne/go-auction/shared/middleware"
+	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
 )
 
 func main() {
@@ -25,7 +26,14 @@ func main() {
 	defer db.Pool.Close()
 
 	bidRepo := postgres.NewBidRepository(db.Pool)
-	bidUsecase := usecase.NewBidUsecase(bidRepo)
+
+	redisClient, err := redis.NewRedisClient()
+	if err != nil {
+		log.Fatal("Failed to connect to redis:", err)
+	}
+	defer redisClient.Pool.Close()
+
+	bidUsecase := usecase.NewBidUsecase(bidRepo, redisClient)
 
 	router := gin.Default()
 	

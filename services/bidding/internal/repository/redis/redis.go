@@ -1,0 +1,47 @@
+package redis
+
+import (
+	"context"
+	"log"
+	"os"
+	"time"
+	"github.com/redis/go-redis/v9"
+)
+
+type RedisClient struct {
+	Pool *redis.Client
+}
+
+func NewRedisClient() (*RedisClient, error) {
+	url := os.Getenv("REDIS_URL")
+	
+	opt, err := redis.ParseURL(url)
+	if err != nil {
+		return nil, err
+	}
+
+	opt.PoolSize = 20
+	opt.MinIdleConns = 5
+	opt.DialTimeout = 5 * time.Second
+
+	rdb := redis.NewClient(opt)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
+	log.Println("Connected to Redis successfully")
+	
+	return &RedisClient{Pool: rdb}, nil
+}
+
+func (r *RedisClient) Publish(ctx context.Context, channel string, payload interface{}) error {
+	return r.Pool.Publish(ctx, channel, payload).Err()
+}
+
+func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+	return r.Pool.Subscribe(ctx, channel)
+}
