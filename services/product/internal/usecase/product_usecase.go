@@ -5,6 +5,8 @@ import (
     "time"
     "fmt"
     "log"
+
+	"github.com/google/uuid"
 	"github.com/loc-ne/go-auction/services/product/internal/entity"
 	repoRedis "github.com/loc-ne/go-auction/services/product/internal/repository/redis"
     "github.com/redis/go-redis/v9"
@@ -14,12 +16,14 @@ type ProductRepository interface {
     Create(ctx context.Context, product *entity.Product) error
     GetActiveAuctions(ctx context.Context, limit, offset int) ([]entity.Product, error)
     GetByID(ctx context.Context, id string) (*entity.Product, error)
+	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
 }
 
 type ProductUsecase interface {
 	Create(ctx context.Context, product *entity.Product) error
 	GetActiveAuctions(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByID(ctx context.Context, id string) (*entity.Product, error)
+	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
 }
 
 type productUsecase struct {
@@ -73,5 +77,8 @@ func (u *productUsecase) GetByID(ctx context.Context, id string) (*entity.Produc
 	return u.repo.GetByID(ctx, id)
 }
 
+func (u *productUsecase) UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error {
+	return u.repo.UpdateCurrentPrice(ctx, productID, currentPrice)
+}
 
 

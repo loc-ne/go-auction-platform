@@ -9,7 +9,7 @@ import (
 
 type BidMessage struct {
 	ProductID string  `json:"product_id"`
-	Price     float64 `json:"price"`
+	Price     int64   `json:"price"`
 }
 
 type BidRepository interface {

@@ -10,6 +10,7 @@ import (
     "github.com/loc-ne/go-auction/services/product/internal/usecase"
     productHttp "github.com/loc-ne/go-auction/services/product/internal/delivery/http"
     "github.com/loc-ne/go-auction/services/product/internal/repository/redis"
+	"github.com/loc-ne/go-auction/services/product/internal/worker"
 )   
 
 func main() {
@@ -25,6 +26,7 @@ func main() {
 
     jwtSecret := os.Getenv("JWT_SECRET") 
     repo := postgres.NewProductRepository(db.Pool)
+	statRepo := postgres.NewProductStatRepository(db.Pool)
 
     redisClient, err := redis.NewRedisClient()
 	if err != nil {
@@ -33,9 +35,15 @@ func main() {
 	defer redisClient.Pool.Close()
 
     productUsecase := usecase.NewProductUsecase(repo, redisClient)
+	productStatUsecase := usecase.NewProductStatUsecase(statRepo, redisClient)
+
+	productStatWorker := worker.NewProductStatWorker(redisClient, productStatUsecase, productUsecase)
+	go productStatWorker.Start(ctx)
+
     router := gin.Default()
     productHttp.NewProductHandler(router, productUsecase, jwtSecret)
-    port := os.Getenv("PRODUCT_PORT")
+    
+	port := os.Getenv("PRODUCT_PORT")
     log.Printf("Product Service listening on port %s...\n", port)
     router.Run(":" + port)
     

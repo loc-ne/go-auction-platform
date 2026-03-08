@@ -2,10 +2,11 @@ package postgres
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"github.com/loc-ne/go-auction/services/product/internal/entity"
     "github.com/loc-ne/go-auction/services/product/internal/usecase" 
 	"github.com/jackc/pgx/v5/pgxpool"
-)	
+)
 
 type productRepo struct {
     db *pgxpool.Pool
@@ -57,3 +58,8 @@ func (r *productRepo) GetByID(ctx context.Context, id string) (*entity.Product, 
 	return &product, nil
 }
 
+func (r *productRepo) UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error {
+	sql := `UPDATE products SET current_price = $2, updated_at = NOW() WHERE id = $1`
+	_, err := r.db.Exec(ctx, sql, productID, currentPrice)
+	return err
+}	
