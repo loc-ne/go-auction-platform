@@ -17,6 +17,7 @@ type ProductRepository interface {
     GetActiveAuctions(ctx context.Context, limit, offset int) ([]entity.Product, error)
     GetByID(ctx context.Context, id string) (*entity.Product, error)
 	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
+	HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error)
 }
 
 type ProductUsecase interface {
@@ -24,6 +25,7 @@ type ProductUsecase interface {
 	GetActiveAuctions(ctx context.Context, limit, offset int) ([]entity.Product, error)
 	GetByID(ctx context.Context, id string) (*entity.Product, error)
 	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
+	HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error)
 }
 
 type productUsecase struct {
@@ -79,6 +81,10 @@ func (u *productUsecase) GetByID(ctx context.Context, id string) (*entity.Produc
 
 func (u *productUsecase) UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error {
 	return u.repo.UpdateCurrentPrice(ctx, productID, currentPrice)
+}
+
+func (u *productUsecase) HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error) {
+	return u.repo.HandleFavorite(ctx, userID, productID)
 }
 
 

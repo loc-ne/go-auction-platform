@@ -62,4 +62,30 @@ func (r *productRepo) UpdateCurrentPrice(ctx context.Context, productID uuid.UUI
 	sql := `UPDATE products SET current_price = $2, updated_at = NOW() WHERE id = $1`
 	_, err := r.db.Exec(ctx, sql, productID, currentPrice)
 	return err
-}	
+}
+
+func (r *productRepo) HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error) {
+	var exists bool
+	checkSQL := `SELECT EXISTS(SELECT 1 FROM product_favorites WHERE user_id = $1 AND product_id = $2)`
+	err := r.db.QueryRow(ctx, checkSQL, userID, productID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	if exists {
+		deleteSQL := `DELETE FROM product_favorites WHERE user_id = $1 AND product_id = $2`
+		_, err = r.db.Exec(ctx, deleteSQL, userID, productID)
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	}
+
+	insertSQL := `INSERT INTO product_favorites (user_id, product_id) VALUES ($1, $2)`
+	_, err = r.db.Exec(ctx, insertSQL, userID, productID)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

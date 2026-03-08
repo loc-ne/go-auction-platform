@@ -29,6 +29,7 @@ func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase, jwtSecret string
 		protected.Use(middleware.AuthMiddleware(jwtSecret))
 		{
 			protected.POST("", handler.CreateProduct)
+			protected.POST("/:id/favorite", handler.HandleFavorite)
 		}
 	}
 }
@@ -95,4 +96,33 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": product})
+}
+
+func (h *ProductHandler) HandleFavorite(c *gin.Context) {
+	idStr := c.Param("id")
+	productID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product ID format"})
+		return
+	}
+
+	userIDRaw, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token"})
+		return
+	}
+
+	isFavorite, err := h.usecase.HandleFavorite(c.Request.Context(), userID, productID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle favorite action: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"is_favorite": isFavorite})
 }
