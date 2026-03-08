@@ -9,6 +9,7 @@ import (
     "github.com/loc-ne/go-auction/services/product/internal/repository/postgres"
     "github.com/loc-ne/go-auction/services/product/internal/usecase"
     productHttp "github.com/loc-ne/go-auction/services/product/internal/delivery/http"
+    "github.com/loc-ne/go-auction/services/product/internal/repository/redis"
 )   
 
 func main() {
@@ -24,7 +25,14 @@ func main() {
 
     jwtSecret := os.Getenv("JWT_SECRET") 
     repo := postgres.NewProductRepository(db.Pool)
-    productUsecase := usecase.NewProductUsecase(repo)
+
+    redisClient, err := redis.NewRedisClient()
+	if err != nil {
+		log.Fatal("Failed to connect to redis:", err)
+	}
+	defer redisClient.Pool.Close()
+
+    productUsecase := usecase.NewProductUsecase(repo, redisClient)
     router := gin.Default()
     productHttp.NewProductHandler(router, productUsecase, jwtSecret)
     port := os.Getenv("PRODUCT_PORT")
