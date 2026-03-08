@@ -55,3 +55,19 @@ func (r *productStatRepo) IncrementCounter(ctx context.Context, productID uuid.U
 
 	return &productStat, nil
 }
+
+func (r *productStatRepo) GetStatByID(ctx context.Context, productID uuid.UUID) (*entity.ProductStat, error) {
+	sql := `SELECT product_id, bid_count, view_count, favorite_count, updated_at FROM product_stats WHERE product_id = $1`
+	var stat entity.ProductStat
+	err := r.db.QueryRow(ctx, sql, productID).Scan(
+		&stat.ProductID,
+		&stat.BidCount,
+		&stat.ViewCount,
+		&stat.FavoriteCount,
+		&stat.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &stat, nil
+}

@@ -3,13 +3,11 @@ package usecase
 import (
 	"context"
     "time"
-    "fmt"
     "log"
 
 	"github.com/google/uuid"
 	"github.com/loc-ne/go-auction/services/product/internal/entity"
 	repoRedis "github.com/loc-ne/go-auction/services/product/internal/repository/redis"
-    "github.com/redis/go-redis/v9"
 )
 
 type ProductRepository interface {
@@ -30,10 +28,10 @@ type ProductUsecase interface {
 
 type productUsecase struct {
     repo ProductRepository
-	redisClient *repoRedis.RedisClient 
+	redisClient repoRedis.RedisRepository 
 }
 
-func NewProductUsecase(r ProductRepository, red *repoRedis.RedisClient) ProductUsecase {
+func NewProductUsecase(r ProductRepository, red repoRedis.RedisRepository) ProductUsecase {
     return &productUsecase{
         repo:      r,
 		redisClient: red,
@@ -50,18 +48,7 @@ func (u *productUsecase) Create(ctx context.Context, product *entity.Product) er
         ttl := time.Until(product.EndAt)
         
         if ttl > 0 {
-            priceKey := fmt.Sprintf("product:price:%s", product.ID.String())
-            
-            pipe := u.redisClient.Pool.Pipeline()
-
-            pipe.Set(ctx, priceKey, product.StartingPrice, ttl)
-            
-            pipe.ZAdd(ctx, "hot_ranking", redis.Z{
-                Score:  0,
-                Member: product.ID.String(),
-            })
-
-            _, err = pipe.Exec(ctx)
+            err = u.redisClient.SetProductInitialState(ctx, product.ID.String(), product.StartingPrice, ttl)
             if err != nil {
                 log.Printf("Redis initialization failed for product %s: %v", product.ID, err)
             }

@@ -12,16 +12,16 @@ import (
 
 
 type ProductStatWorker struct {
-	redisClient *redis.RedisClient
+	redisClient        redis.RedisRepository
 	productStatUsecase usecase.ProductStatUsecase
-	productUsecase usecase.ProductUsecase
+	productUsecase     usecase.ProductUsecase
 }
 
-func NewProductStatWorker(redisClient *redis.RedisClient, productStatUsecase usecase.ProductStatUsecase, productUsecase usecase.ProductUsecase) *ProductStatWorker {
+func NewProductStatWorker(redisClient redis.RedisRepository, productStatUsecase usecase.ProductStatUsecase, productUsecase usecase.ProductUsecase) *ProductStatWorker {
 	return &ProductStatWorker{
-		redisClient: redisClient,
+		redisClient:        redisClient,
 		productStatUsecase: productStatUsecase,
-		productUsecase: productUsecase,
+		productUsecase:     productUsecase,
 	}
 }
 

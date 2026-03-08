@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -12,12 +13,14 @@ import (
 )
 
 type ProductHandler struct {
-	usecase usecase.ProductUsecase
+	usecase     usecase.ProductUsecase
+	statUsecase usecase.ProductStatUsecase
 }
 
-func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase, jwtSecret string) {
+func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase, statU usecase.ProductStatUsecase, jwtSecret string) {
 	handler := &ProductHandler{
-		usecase: u,
+		usecase:     u,
+		statUsecase: statU,
 	}
 
 	productGroup := r.Group("/api/v1/products")
@@ -95,6 +98,8 @@ func (h *ProductHandler) GetProductByID(c *gin.Context) {
 		return
 	}
 
+	h.statUsecase.QueueView(idStr)
+
 	c.JSON(http.StatusOK, gin.H{"data": product})
 }
 
@@ -123,6 +128,8 @@ func (h *ProductHandler) HandleFavorite(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle favorite action: " + err.Error()})
 		return
 	}
+
+	go h.statUsecase.RefreshHotRankingByID(context.Background(), idStr)
 
 	c.JSON(http.StatusOK, gin.H{"is_favorite": isFavorite})
 }

@@ -28,11 +28,11 @@ func main() {
     repo := postgres.NewProductRepository(db.Pool)
 	statRepo := postgres.NewProductStatRepository(db.Pool)
 
-    redisClient, err := redis.NewRedisClient()
+    redisClient, err := redis.NewRedisRepository()
 	if err != nil {
 		log.Fatal("Failed to connect to redis:", err)
 	}
-	defer redisClient.Pool.Close()
+	defer redisClient.Close()
 
     productUsecase := usecase.NewProductUsecase(repo, redisClient)
 	productStatUsecase := usecase.NewProductStatUsecase(statRepo, redisClient)
@@ -41,7 +41,7 @@ func main() {
 	go productStatWorker.Start(ctx)
 
     router := gin.Default()
-    productHttp.NewProductHandler(router, productUsecase, jwtSecret)
+    productHttp.NewProductHandler(router, productUsecase, productStatUsecase, jwtSecret)
     
 	port := os.Getenv("PRODUCT_PORT")
     log.Printf("Product Service listening on port %s...\n", port)

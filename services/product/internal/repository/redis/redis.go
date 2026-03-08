@@ -2,19 +2,29 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"time"
+
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisClient struct {
-	Pool *redis.Client
+type RedisRepository interface {
+	Publish(ctx context.Context, channel string, payload interface{}) error
+	Subscribe(ctx context.Context, channel string) *redis.PubSub
+	SetProductInitialState(ctx context.Context, productID string, startingPrice int64, ttl time.Duration) error
+	UpdateHotRanking(ctx context.Context, productID string, score float64) error
+	Close() error
 }
 
-func NewRedisClient() (*RedisClient, error) {
+type redisRepo struct {
+	pool *redis.Client
+}
+
+func NewRedisRepository() (RedisRepository, error) {
 	url := os.Getenv("REDIS_URL")
-	
+
 	opt, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, err
@@ -34,14 +44,43 @@ func NewRedisClient() (*RedisClient, error) {
 	}
 
 	log.Println("Connected to Redis successfully")
-	
-	return &RedisClient{Pool: rdb}, nil
+
+	return &redisRepo{pool: rdb}, nil
 }
 
-func (r *RedisClient) Publish(ctx context.Context, channel string, payload interface{}) error {
-	return r.Pool.Publish(ctx, channel, payload).Err()
+func (r *redisRepo) Publish(ctx context.Context, channel string, payload interface{}) error {
+	return r.pool.Publish(ctx, channel, payload).Err()
 }
 
-func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubSub {
-	return r.Pool.Subscribe(ctx, channel)
+func (r *redisRepo) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+	return r.pool.Subscribe(ctx, channel)
+}
+
+func (r *redisRepo) SetProductInitialState(ctx context.Context, productID string, startingPrice int64, ttl time.Duration) error {
+	priceKey := fmt.Sprintf("product:price:%s", productID)
+	pipe := r.pool.Pipeline()
+
+	pipe.Set(ctx, priceKey, startingPrice, ttl)
+
+	pipe.ZAdd(ctx, "hot_ranking", redis.Z{
+		Score:  0,
+		Member: productID,
+	})
+
+	_, err := pipe.Exec(ctx)
+	return err
+}
+
+func (r *redisRepo) UpdateHotRanking(ctx context.Context, productID string, score float64) error {
+	return r.pool.ZAdd(ctx, "hot_ranking", redis.Z{
+		Score:  score,
+		Member: productID,
+	}).Err()
+}
+
+func (r *redisRepo) Close() error {
+	if r.pool != nil {
+		return r.pool.Close()
+	}
+	return nil
 }
