@@ -11,6 +11,7 @@ import (
     productHttp "github.com/loc-ne/go-auction/services/product/internal/delivery/http"
     "github.com/loc-ne/go-auction/services/product/internal/repository/redis"
 	"github.com/loc-ne/go-auction/services/product/internal/worker"
+    "github.com/loc-ne/go-auction/shared/pkg"
 )   
 
 func main() {
@@ -37,11 +38,19 @@ func main() {
     productUsecase := usecase.NewProductUsecase(repo, redisClient)
 	productStatUsecase := usecase.NewProductStatUsecase(statRepo, redisClient)
 
+	cloudName := os.Getenv("CLOUDINARY_CLOUD_NAME")
+	cloudAPIKey := os.Getenv("CLOUDINARY_API_KEY")
+	cloudAPISecret := os.Getenv("CLOUDINARY_API_SECRET")
+	cloudinaryUsecase := pkg.NewCloudinaryUsecase(cloudName, cloudAPIKey, cloudAPISecret)
+
 	productStatWorker := worker.NewProductStatWorker(redisClient, productStatUsecase, productUsecase)
 	go productStatWorker.Start(ctx)
 
     router := gin.Default()
+	router.MaxMultipartMemory = 20 << 20 
+
     productHttp.NewProductHandler(router, productUsecase, productStatUsecase, jwtSecret)
+	productHttp.NewMediaHandler(router, cloudinaryUsecase, jwtSecret)
     
 	port := os.Getenv("PRODUCT_PORT")
     log.Printf("Product Service listening on port %s...\n", port)
