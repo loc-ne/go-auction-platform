@@ -26,6 +26,7 @@ func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase, statU usecase.Pr
 	productGroup := r.Group("/api/v1/products")
 	{
 		productGroup.GET("/active", handler.GetActiveAuctions)
+		productGroup.GET("/trending", handler.GetTrendingProducts)
 		productGroup.GET("/:id", handler.GetProductByID)
 
 		protected := productGroup.Group("")
@@ -132,4 +133,20 @@ func (h *ProductHandler) HandleFavorite(c *gin.Context) {
 	go h.statUsecase.RefreshHotRankingByID(context.Background(), idStr)
 
 	c.JSON(http.StatusOK, gin.H{"is_favorite": isFavorite})
+}
+
+func (h *ProductHandler) GetTrendingProducts(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	limit, err := strconv.ParseInt(limitStr, 10, 64)
+	if err != nil {
+		limit = 10
+	}
+
+	products, err := h.usecase.GetTrendingProducts(c.Request.Context(), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch trending products: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": products})
 }

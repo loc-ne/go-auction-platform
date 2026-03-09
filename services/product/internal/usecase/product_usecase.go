@@ -16,6 +16,7 @@ type ProductRepository interface {
     GetByID(ctx context.Context, id string) (*entity.Product, error)
 	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
 	HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error)
+	GetProductsByIDs(ctx context.Context, ids []string) ([]entity.Product, error)
 }
 
 type ProductUsecase interface {
@@ -24,6 +25,7 @@ type ProductUsecase interface {
 	GetByID(ctx context.Context, id string) (*entity.Product, error)
 	UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error
 	HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error)
+	GetTrendingProducts(ctx context.Context, limit int64) ([]entity.Product, error)
 }
 
 type productUsecase struct {
@@ -72,6 +74,20 @@ func (u *productUsecase) UpdateCurrentPrice(ctx context.Context, productID uuid.
 
 func (u *productUsecase) HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error) {
 	return u.repo.HandleFavorite(ctx, userID, productID)
+}
+
+func (u *productUsecase) GetTrendingProducts(ctx context.Context, limit int64) ([]entity.Product, error) {
+	ids, err := u.redisClient.GetHotRanking(ctx, limit)
+	if err != nil {
+		log.Printf("Failed to get trending product ids from redis: %v", err)
+		return nil, err
+	}
+
+	if len(ids) == 0 {
+		return []entity.Product{}, nil
+	}
+
+	return u.repo.GetProductsByIDs(ctx, ids)
 }
 
 

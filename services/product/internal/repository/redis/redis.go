@@ -15,6 +15,7 @@ type RedisRepository interface {
 	Subscribe(ctx context.Context, channel string) *redis.PubSub
 	SetProductInitialState(ctx context.Context, productID string, startingPrice int64, ttl time.Duration) error
 	UpdateHotRanking(ctx context.Context, productID string, score float64) error
+	GetHotRanking(ctx context.Context, limit int64) ([]string, error)
 	Close() error
 }
 
@@ -76,6 +77,10 @@ func (r *redisRepo) UpdateHotRanking(ctx context.Context, productID string, scor
 		Score:  score,
 		Member: productID,
 	}).Err()
+}
+
+func (r *redisRepo) GetHotRanking(ctx context.Context, limit int64) ([]string, error) {
+	return r.pool.ZRevRange(ctx, "hot_ranking", 0, limit-1).Result()
 }
 
 func (r *redisRepo) Close() error {

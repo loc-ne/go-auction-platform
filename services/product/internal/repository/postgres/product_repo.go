@@ -89,3 +89,51 @@ func (r *productRepo) HandleFavorite(ctx context.Context, userID, productID uuid
 
 	return true, nil
 }
+
+func (r *productRepo) GetProductsByIDs(ctx context.Context, ids []string) ([]entity.Product, error) {
+	if len(ids) == 0 {
+		return []entity.Product{}, nil
+	}
+
+	uuidArray := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		pID, err := uuid.Parse(id)
+		if err == nil {
+			uuidArray = append(uuidArray, pID)
+		}
+	}
+
+	if len(uuidArray) == 0 {
+		return []entity.Product{}, nil
+	}
+
+	sql := `SELECT id, seller_id, name, description, starting_price, current_price, bid_increment, status, image_urls, start_at, end_at, winner_id, created_at, updated_at FROM products WHERE id = ANY($1)`
+	rows, err := r.db.Query(ctx, sql, uuidArray)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	productsMap := make(map[string]entity.Product)
+	for rows.Next() {
+		var product entity.Product
+		err := rows.Scan(&product.ID, &product.SellerID, &product.Name, &product.Description, &product.StartingPrice, &product.CurrentPrice, &product.BidIncrement, &product.Status, &product.ImageURLs, &product.StartAt, &product.EndAt, &product.WinnerID, &product.CreatedAt, &product.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		productsMap[product.ID.String()] = product
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var sortedProducts []entity.Product
+	for _, id := range ids {
+		if p, exists := productsMap[id]; exists {
+			sortedProducts = append(sortedProducts, p)
+		}
+	}
+
+	return sortedProducts, nil
+}
