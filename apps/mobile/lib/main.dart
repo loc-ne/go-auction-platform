@@ -6,22 +6,37 @@ import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
+import 'features/product/data/repositories/product_repository.dart';
 
 void main() {
   const String apiUrl = "http://10.0.2.2:8080/api/v1";
   final AuthRepository authRepository = AuthRepositoryImpl(baseUrl: apiUrl); 
+  final ProductRepository productRepository = ProductRepository(baseUrl: apiUrl);
 
-  runApp(MyApp(authRepository: authRepository));
+  runApp(MyApp(
+    authRepository: authRepository,
+    productRepository: productRepository,
+  ));
 }
 
 class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
+  final ProductRepository productRepository;
   
-  const MyApp({super.key, required this.authRepository});
+  const MyApp({
+    super.key, 
+    required this.authRepository,
+    required this.productRepository,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider.value(value: authRepository),
+        RepositoryProvider.value(value: productRepository),
+      ],
+      child: MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc(authRepository: authRepository),
@@ -40,6 +55,6 @@ class MyApp extends StatelessWidget {
           '/home': (context) => const HomePage(),
         },
       ),
-    );
+    ));
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/repositories/product_repository.dart';
 
 class SubmitProductPage extends StatefulWidget {
   const SubmitProductPage({super.key});
@@ -15,6 +17,8 @@ class _SubmitProductPageState extends State<SubmitProductPage> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
   List<File> _images = [];
+  bool _isLoading = false;
+  int _durationDays = 7; 
 
   // Controllers
   final _nameController = TextEditingController();
@@ -207,6 +211,40 @@ class _SubmitProductPageState extends State<SubmitProductPage> {
                 ],
               ),
 
+              const SizedBox(height: 24),
+
+              // 5. Thời gian đấu giá (Duration)
+              _buildInputLabel('Thời gian đấu giá'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _durationDays,
+                    isExpanded: true,
+                    icon: const Icon(LucideIcons.chevronDown, size: 20),
+                    style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                    onChanged: (int? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _durationDays = newValue;
+                        });
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('1 Ngày (Bán siêu tốc)')),
+                      DropdownMenuItem(value: 3, child: Text('3 Ngày (Khuyến nghị)')),
+                      DropdownMenuItem(value: 7, child: Text('7 Ngày (Tiêu chuẩn)')),
+                      DropdownMenuItem(value: 14, child: Text('14 Ngày (Đồ quý hiếm)')),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 48),
 
               // Nút Đăng
@@ -219,22 +257,76 @@ class _SubmitProductPageState extends State<SubmitProductPage> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() && _images.isNotEmpty) {
-                      // TODO: Call API
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Đang xử lý tải lên...')),
-                      );
-                    } else if (_images.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Vui lòng chọn ít nhất 1 ảnh!')),
-                      );
-                    }
-                  },
-                  child: Text(
-                    'ĐĂNG PHIÊN ĐẤU GIÁ',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                  ),
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          if (_formKey.currentState!.validate() && _images.isNotEmpty) {
+                            setState(() {
+                              _isLoading = true;
+                            });
+
+                            try {
+                              final repo = context.read<ProductRepository>();
+                              final startingPrice = int.parse(_startPriceController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+                              final bidIncrement = int.parse(_bidIncrementController.text.replaceAll(RegExp(r'[^0-9]'), ''));
+                              final imageUrls = await repo.submitImages(_images);
+
+                              await repo.submitProduct(
+                                name: _nameController.text.trim(),
+                                description: _descController.text.trim(),
+                                startingPrice: startingPrice,
+                                bidIncrement: bidIncrement,
+                                images: imageUrls,
+                                durationDays: _durationDays,
+                              );
+
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Đăng sản phẩm thành công!')),
+                              );
+                              Navigator.pop(context);
+                            } catch (e) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: Colors.red.shade600,
+                                ),
+                              );
+                              
+                              // Xử lý mất token / chưa đăng nhập
+                              if (e.toString().contains('đăng nhập')) {
+                                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                              }
+                            }
+                          } else if (_images.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Vui lòng chọn ít nhất 1 ảnh!'),
+                                backgroundColor: Colors.red.shade600,
+                              ),
+                            );
+                          }
+                        },
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'ĐĂNG PHIÊN ĐẤU GIÁ',
+                          style: GoogleFonts.inter(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                        ),
                 ),
               ),
               const SizedBox(height: 40),
