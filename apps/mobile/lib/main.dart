@@ -5,7 +5,7 @@ import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
-
+import 'features/home/presentation/pages/home_page.dart';
 
 void main() {
   const String apiUrl = "http://10.0.2.2:8080/api/v1";
@@ -33,10 +33,11 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           useMaterial3: true,
         ),
-        initialRoute: '/login',
+        initialRoute: '/home',
         routes: {
           '/login': (context) => const LoginPage(),
           '/register': (context) => const RegisterPage(),
+          '/home': (context) => const HomePage(),
         },
       ),
     );
