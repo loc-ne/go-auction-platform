@@ -41,11 +41,12 @@ func main() {
     {
         authGroup.POST("/login", handler.Login)
         authGroup.POST("/register", handler.Register)
+        authGroup.POST("/refresh-token", handler.RefreshToken)
         
         protected := authGroup.Use(middleware.AuthMiddleware(secret))
         {
             protected.GET("/me", handler.Me)
-           // protected.POST("/logout", handler.Logout)
+            protected.POST("/logout", handler.Logout)
         }
     }
 

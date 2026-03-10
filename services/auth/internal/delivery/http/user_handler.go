@@ -76,7 +76,7 @@ func (h *UserHandler) Login(c *gin.Context) {
         return
     }
 
-    c.SetCookie("access_token", accessToken, 60*60*24*7, "/", "", false, true)
+    c.SetCookie("access_token", accessToken, 15*60, "/", "", false, true)
     c.SetCookie("refresh_token", refreshToken, 60*60*24*30, "/", "", false, true)
     resUser := gin.H{
         "email":     user.Email,
@@ -106,6 +106,85 @@ func (h *UserHandler) Me(c *gin.Context) {
             "email":     user.Email,
             "fullName":  user.FullName,
             "role":      user.Role,
+        },
+    })
+}
+
+func (h *UserHandler) Logout(c *gin.Context) {
+    refreshToken, err := c.Cookie("refresh_token")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Refresh token not found"})
+        return
+    }
+
+    ctx := c.Request.Context()
+    
+    session, err := h.sessionUsecase.GetSessionByRefreshToken(ctx, refreshToken)
+    if err == nil && session != nil {
+        _ = h.sessionUsecase.DeleteSession(ctx, session.ID)
+    }
+
+    c.SetCookie("access_token", "", -1, "/", "", false, true)
+    c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true, 
+        "message": "Logout successfully",
+    })
+}
+
+func (h *UserHandler) RefreshToken(c *gin.Context) {
+    refreshToken, err := c.Cookie("refresh_token")
+    if err != nil {
+         c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token not found"})
+         return
+    }
+
+    ctx := c.Request.Context()
+
+    session, err := h.sessionUsecase.GetSessionByRefreshToken(ctx, refreshToken)
+    if err != nil || session == nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Session is invalid or expired"})
+        return
+    }
+
+    user, err := h.userUsecase.GetUserByID(ctx, session.UserID)
+    if err != nil || user == nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user information"})
+        return
+    }
+
+    newAccessToken, newRefreshToken, err := h.userUsecase.RefreshTokens(ctx, user)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new token"})
+        return
+    }
+
+    _ = h.sessionUsecase.DeleteSession(ctx, session.ID)
+    
+    newSession := &entity.Session{
+        UserID: user.ID,
+        RefreshToken: newRefreshToken,
+        UserAgent: c.Request.UserAgent(),
+        ClientIP: c.ClientIP(),
+        ExpiresAt: time.Now().Add(time.Hour * 24 * 30),
+    }   
+    _ = h.sessionUsecase.CreateSession(ctx, newSession)
+
+    c.SetCookie("access_token", newAccessToken, 15*60, "/", "", false, true)
+    c.SetCookie("refresh_token", newRefreshToken, 60*60*24*30, "/", "", false, true)
+
+    resUser := gin.H{
+        "email":     user.Email,
+        "fullName":  user.FullName,
+        "role":      user.Role,
+    }
+    c.JSON(http.StatusOK, gin.H{
+        "success": true, 
+        "data": gin.H{
+             "access_token": newAccessToken, 
+             "refresh_token": newRefreshToken, 
+             "user": resUser,
         },
     })
 }

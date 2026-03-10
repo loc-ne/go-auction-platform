@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"context"
-	"github.com/loc-ne/go-auction/services/auth/internal/entity"
-    "github.com/loc-ne/go-auction/services/auth/internal/usecase" 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/loc-ne/go-auction/services/auth/internal/entity"
+	"github.com/loc-ne/go-auction/services/auth/internal/usecase"
 )	
 
 type userRepo struct {
@@ -27,6 +28,17 @@ func (r *userRepo) Create(ctx context.Context, u *entity.User) error {
 func (r *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	sql := `SELECT * FROM users WHERE email = $1`
 	row := r.db.QueryRow(ctx, sql, email)
+	var user entity.User
+	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Role, &user.Status, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return nil, nil
+	}
+	return &user, nil
+}
+
+func (r *userRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	sql := `SELECT * FROM users WHERE id = $1`
+	row := r.db.QueryRow(ctx, sql, id)
 	var user entity.User
 	err := row.Scan(&user.ID, &user.Email, &user.PasswordHash, &user.FullName, &user.Role, &user.Status, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {

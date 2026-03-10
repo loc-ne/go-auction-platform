@@ -17,13 +17,17 @@ var (
 type SessionRepository interface {
     Create(ctx context.Context, session *entity.Session) error
 	Block(ctx context.Context, id uuid.UUID) error
+    Delete(ctx context.Context, id uuid.UUID) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entity.Session, error)
+    GetByRefreshToken(ctx context.Context, refreshToken string) (*entity.Session, error)
 }
 
 type SessionUsecase interface {
 	CreateSession(ctx context.Context, session *entity.Session) error
 	BlockSession(ctx context.Context, id uuid.UUID) error
+    DeleteSession(ctx context.Context, id uuid.UUID) error
 	GetSessionByID(ctx context.Context, id uuid.UUID) (*entity.Session, error)
+    GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*entity.Session, error)
 }
 
 type sessionUsecase struct {
@@ -45,6 +49,28 @@ func (u *sessionUsecase) BlockSession(ctx context.Context, id uuid.UUID) error {
 
 func (u *sessionUsecase) GetSessionByID(ctx context.Context, id uuid.UUID) (*entity.Session, error) {
     session, err := u.repo.GetByID(ctx, id)
+    if err != nil {
+        return nil, err
+    }
+	if session == nil {
+		return nil, ErrSessionNotFound
+	}
+    if session.IsBlocked {
+        return nil, ErrSessionBlocked
+    }
+    if time.Now().After(session.ExpiresAt) {
+        return nil, ErrSessionExpired
+    }
+
+    return session, nil
+}
+
+func (u *sessionUsecase) DeleteSession(ctx context.Context, id uuid.UUID) error {
+	return u.repo.Delete(ctx, id)
+}
+
+func (u *sessionUsecase) GetSessionByRefreshToken(ctx context.Context, refreshToken string) (*entity.Session, error) {
+    session, err := u.repo.GetByRefreshToken(ctx, refreshToken)
     if err != nil {
         return nil, err
     }

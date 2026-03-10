@@ -46,3 +46,22 @@ func (r *sessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.Sessio
     }
     return &s, nil
 }
+
+func (r *sessionRepo) Delete(ctx context.Context, id uuid.UUID) error {
+    sql := `DELETE FROM sessions WHERE id = $1`
+    _, err := r.db.Exec(ctx, sql, id)
+    return err
+}
+
+func (r *sessionRepo) GetByRefreshToken(ctx context.Context, refreshToken string) (*entity.Session, error) {
+    var s entity.Session
+    sql := `SELECT id, user_id, refresh_token, is_blocked, expires_at FROM sessions WHERE refresh_token = $1`
+    err := r.db.QueryRow(ctx, sql, refreshToken).Scan(&s.ID, &s.UserID, &s.RefreshToken, &s.IsBlocked, &s.ExpiresAt)
+    if err != nil {
+        if errors.Is(err, pgx.ErrNoRows) {
+            return nil, nil
+        }
+        return nil, err
+    }
+    return &s, nil
+}

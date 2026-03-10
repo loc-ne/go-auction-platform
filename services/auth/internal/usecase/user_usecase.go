@@ -16,12 +16,15 @@ var (
 type UserRepository interface {
     Create(ctx context.Context, user *entity.User) error
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
+    GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
 }
 
 type UserUsecase interface {
 	Register(ctx context.Context, fullName, email, password string) error
 	Login(ctx context.Context, email string, password string) (*entity.User, string, string, error)
 	GetUser(ctx context.Context, email string) (*entity.User, error)
+    GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
+    RefreshTokens(ctx context.Context, user *entity.User) (string, string, error)
 }
 
 type userUsecase struct {
@@ -85,4 +88,16 @@ func (u *userUsecase) GetUser(ctx context.Context, email string) (*entity.User, 
 		return nil, err
 	}
 	return user, nil
+}
+
+func (u *userUsecase) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+	user, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (u *userUsecase) RefreshTokens(ctx context.Context, user *entity.User) (string, string, error) {
+    return pkg.GenerateTokens(ctx, user.ID.String(), user.Email, u.jwtSecret)
 }
