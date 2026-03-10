@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -11,6 +12,15 @@ import (
 	"github.com/loc-ne/go-auction/services/product/internal/usecase"
 	"github.com/loc-ne/go-auction/shared/middleware"
 )
+
+type CreateProductRequest struct {
+	Name          string   `json:"name" binding:"required"`
+	Description   string   `json:"description" binding:"required"`
+	StartingPrice int64    `json:"starting_price" binding:"required"`
+	BidIncrement  int64    `json:"bid_increment" binding:"required"`
+	ImageURLs     []string `json:"image_urls" binding:"required"`
+	DurationDays  int      `json:"duration_days" binding:"required"`
+}
 
 type ProductHandler struct {
 	usecase     usecase.ProductUsecase
@@ -39,8 +49,8 @@ func NewProductHandler(r *gin.Engine, u usecase.ProductUsecase, statU usecase.Pr
 }
 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {
-	var product entity.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
+	var req CreateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload: " + err.Error()})
 		return
 	}
@@ -57,7 +67,18 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
-	product.SellerID = parsedUserID
+
+	product := entity.Product{
+		SellerID:      parsedUserID,
+		Name:          req.Name,
+		Description:   req.Description,
+		StartingPrice: req.StartingPrice,
+		CurrentPrice:  req.StartingPrice, 
+		BidIncrement:  req.BidIncrement,
+		ImageURLs:     req.ImageURLs,
+		StartAt:       time.Now(),
+		EndAt:         time.Now().AddDate(0, 0, req.DurationDays),
+	}
 
 	if err := h.usecase.Create(c.Request.Context(), &product); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product: " + err.Error()})

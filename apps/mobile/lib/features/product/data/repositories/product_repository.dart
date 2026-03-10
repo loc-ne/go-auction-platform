@@ -78,8 +78,7 @@ class ProductRepository {
           'starting_price': startingPrice,
           'bid_increment': bidIncrement,
           'image_urls': images,
-          'start_at': DateTime.now().toIso8601String(),
-          'end_at': DateTime.now().add(Duration(days: durationDays)).toIso8601String(),
+          'duration_days': durationDays,
         }),
       ).timeout(const Duration(seconds: 15));
 

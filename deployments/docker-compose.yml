@@ -54,8 +54,29 @@ services:
       - MIGRATION_PATH=file://services/auth/migrations
     depends_on:
       - postgres
+    
+  product-service:
+    image: golang:1.24-alpine
+    container_name: product-service
+    working_dir: /app
+    volumes:
+      - ..:/app
+    command: go run services/product/cmd/main.go
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:-123456}@postgres-product:5432/${DB_NAME:-product_db}?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
+      - PRODUCT_PORT=${PRODUCT_PORT:-8002}
+      - MIGRATION_PATH=file://services/product/migrations
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - REDIS_URL=redis://:123456@shared-redis:6379/0
+    depends_on:
+      - postgres-product
 
-  api-gateway:
+  api-gateway:  
     image: golang:1.24-alpine
     container_name: api-gateway
     working_dir: /app
@@ -67,8 +88,10 @@ services:
     environment:
       - GATEWAY_PORT=${GATEWAY_PORT:-8080}
       - AUTH_SERVICE_URL=http://auth-service:${AUTH_PORT:-8001}
+      - PRODUCT_SERVICE_URL=http://product-service:${PRODUCT_PORT:-8002}
     depends_on:
       - auth-service
+      - product-service
   
   redis:
     image: redis:7-alpine

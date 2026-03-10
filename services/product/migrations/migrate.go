@@ -24,14 +24,14 @@ func RunMigrations() {
     if migrationPath == "" {
         log.Fatal("MIGRATION_PATH is not set in .env file")
     }
-    // m, err := migrate.New(
-    //     migrationPath, 
-    //     dbUrl,
-    // )
     m, err := migrate.New(
-        "file://migrations", 
+        migrationPath, 
         dbUrl,
     )
+    // m, err := migrate.New(
+    //     "file://migrations", 
+    //     dbUrl,
+    // )
     if err != nil {
         log.Fatal("Unable to initiate migration: ", err)
     }

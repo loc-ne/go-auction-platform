@@ -12,6 +12,7 @@ import (
 
 type Router struct {
 	authProxy *httputil.ReverseProxy
+	productProxy *httputil.ReverseProxy
 }
 
 func NewRouter(cfg *config.Config) *Router {
@@ -20,8 +21,14 @@ func NewRouter(cfg *config.Config) *Router {
 		log.Fatalf("URL parse error target AuthServiceURL: %v", err)
 	}
 
+	productTarget, err := url.Parse(cfg.ProductServiceURL)
+	if err != nil {
+		log.Fatalf("URL parse error target ProductServiceURL: %v", err)
+	}
+
 	return &Router{
 		authProxy: httputil.NewSingleHostReverseProxy(authTarget),
+		productProxy: httputil.NewSingleHostReverseProxy(productTarget),
 	}
 }
 
@@ -40,6 +47,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if strings.HasPrefix(path, "/api/v1/auth") {
 		r.authProxy.ServeHTTP(w, req)
+		return
+	}
+	if strings.HasPrefix(path, "/api/v1/product") || strings.HasPrefix(path, "/api/v1/media") {
+		r.productProxy.ServeHTTP(w, req)
 		return
 	}
 
