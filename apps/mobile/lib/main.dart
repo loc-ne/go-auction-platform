@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
       child: MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(authRepository: authRepository),
+          create: (context) => AuthBloc(authRepository: authRepository)..add(AuthCheckRequested()),
         ),
       ],
       child: MaterialApp(

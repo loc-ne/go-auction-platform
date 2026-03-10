@@ -29,13 +29,29 @@ class AuthRepositoryImpl implements AuthRepository {
       final token = await secureStorage.read(key: 'access_token');
       if (token == null) return null;
 
-      final response = await client.get(
+      var response = await client.get(
         Uri.parse('$baseUrl/auth/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 401) {
+        final isRefreshed = await _refreshToken();
+        if (isRefreshed) {
+          final newToken = await secureStorage.read(key: 'access_token');
+          response = await client.get(
+            Uri.parse('$baseUrl/auth/me'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $newToken',
+            },
+          ).timeout(const Duration(seconds: 10));
+        } else {
+          return null; 
+        }
+      }
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
@@ -45,6 +61,31 @@ class AuthRepositoryImpl implements AuthRepository {
       return null;
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<bool> _refreshToken() async {
+    try {
+      final refreshToken = await secureStorage.read(key: 'refresh_token');
+      if (refreshToken == null) return false;
+
+      final response = await client.post(
+        Uri.parse('$baseUrl/auth/refresh-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': 'refresh_token=$refreshToken',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final data = body['data'];
+        await _saveTokens(data['access_token'], data['refresh_token']);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -103,4 +144,24 @@ class AuthRepositoryImpl implements AuthRepository {
     throw e.toString();
   }
 }
+
+  @override
+  Future<void> logout() async {
+    try {
+      final token = await secureStorage.read(key: 'access_token');
+      if (token != null) {
+        await client.post(
+          Uri.parse('$baseUrl/auth/logout'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        ).timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {
+    } finally {
+      await secureStorage.delete(key: 'access_token');
+      await secureStorage.delete(key: 'refresh_token');
+    }
+  }
 }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../widgets/product_card.dart';
 import '../widgets/custom_bottom_nav.dart';
+import '../widgets/auth_section.dart';
 import '../../../product/presentation/pages/submit_product_page.dart';
 
 final List<Map<String, dynamic>> mockTrending = [
@@ -65,6 +67,7 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AuthSection(),
                 _buildHeroBanner(),
                 const SizedBox(height: 32),
                 _buildTrendingSection(),
