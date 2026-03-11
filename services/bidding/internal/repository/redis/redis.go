@@ -45,3 +45,7 @@ func (r *RedisClient) Publish(ctx context.Context, channel string, payload inter
 func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubSub {
 	return r.Pool.Subscribe(ctx, channel)
 }
+
+func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
+	return r.Pool.Get(ctx, key).Result()
+}

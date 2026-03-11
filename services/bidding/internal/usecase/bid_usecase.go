@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/loc-ne/go-auction/services/bidding/internal/entity"
 	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
 )
@@ -18,6 +19,7 @@ type BidRepository interface {
 
 type BidUsecase interface {
 	CreateBid(ctx context.Context, bid *entity.Bid) error
+	CheckRoomActive(ctx context.Context, productID string) (bool, error)
 }
 
 type bidUsecase struct {
@@ -51,4 +53,17 @@ func (u *bidUsecase) CreateBid(ctx context.Context, bid *entity.Bid) error {
 	_ = u.redisClient.Publish(ctx, channelName, payload)
 
 	return nil
+}
+
+func (uc *bidUsecase) CheckRoomActive(ctx context.Context, productID string) (bool, error) {
+	priceKey := fmt.Sprintf("product:price:%s", productID)
+	status, err := uc.redisClient.Get(ctx, priceKey)
+	if err != nil {
+		return false, err 
+	}
+	
+	if status == "active" {
+		return true, nil
+	}
+	return false, nil
 }
