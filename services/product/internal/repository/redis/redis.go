@@ -7,13 +7,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/loc-ne/go-auction/services/product/internal/entity"
 	"github.com/redis/go-redis/v9"
 )
 
 type RedisRepository interface {
 	Publish(ctx context.Context, channel string, payload interface{}) error
 	Subscribe(ctx context.Context, channel string) *redis.PubSub
-	SetProductInitialState(ctx context.Context, productID string, startingPrice int64, ttl time.Duration) error
+	SetProductInitialState(ctx context.Context, product *entity.Product, ttl time.Duration) error
 	UpdateHotRanking(ctx context.Context, productID string, score float64) error
 	GetHotRanking(ctx context.Context, limit int64) ([]string, error)
 	Close() error
@@ -57,15 +58,22 @@ func (r *redisRepo) Subscribe(ctx context.Context, channel string) *redis.PubSub
 	return r.pool.Subscribe(ctx, channel)
 }
 
-func (r *redisRepo) SetProductInitialState(ctx context.Context, productID string, startingPrice int64, ttl time.Duration) error {
-	priceKey := fmt.Sprintf("product:price:%s", productID)
+func (r *redisRepo) SetProductInitialState(ctx context.Context, product *entity.Product, ttl time.Duration) error {
+	priceKey := fmt.Sprintf("product:price:%s", product.ID.String())
 	pipe := r.pool.Pipeline()
+	fields := map[string]interface{}{
+		"current_price": product.StartingPrice, 
+		"bid_increment": product.BidIncrement,
+		"seller_id":     product.SellerID.String(),
+		"status":        "active",
+	}
 
-	pipe.Set(ctx, priceKey, startingPrice, ttl)
+	pipe.HSet(ctx, priceKey, fields)
+	pipe.Expire(ctx, priceKey, ttl)
 
 	pipe.ZAdd(ctx, "hot_ranking", redis.Z{
 		Score:  0,
-		Member: productID,
+		Member: product.ID.String(),
 	})
 
 	_, err := pipe.Exec(ctx)

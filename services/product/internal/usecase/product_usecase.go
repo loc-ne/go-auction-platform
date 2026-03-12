@@ -50,7 +50,7 @@ func (u *productUsecase) Create(ctx context.Context, product *entity.Product) er
         ttl := time.Until(product.EndAt)
         
         if ttl > 0 {
-            err = u.redisClient.SetProductInitialState(ctx, product.ID.String(), product.StartingPrice, ttl)
+            err = u.redisClient.SetProductInitialState(ctx, product, ttl)
             if err != nil {
                 log.Printf("Redis initialization failed for product %s: %v", product.ID, err)
             }
