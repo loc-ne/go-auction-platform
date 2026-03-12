@@ -49,6 +49,11 @@ func (h *BidHandler) CreateBid(c *gin.Context) {
 		return
 	}
 
+	if err := h.usecase.ValidateBid(c.Request.Context(), req.ProductID.String(), req.Amount, userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	bid := entity.Bid{
 		ProductID: req.ProductID,
 		UserID:    userID,

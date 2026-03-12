@@ -3,9 +3,20 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
+
+	"github.com/google/uuid"
 	"github.com/loc-ne/go-auction/services/bidding/internal/entity"
 	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
+)
+
+var (
+	ErrProductNotFound  = errors.New("product not found or auction closed")
+	ErrBidPriceTooLow   = errors.New("bid price must be greater than current price + bid increment")
+	ErrSellerCannotBid  = errors.New("seller cannot bid on their own product")
+	ErrAuctionNotActive = errors.New("auction is not currently active")
 )
 
 type BidMessage struct {
@@ -20,6 +31,7 @@ type BidRepository interface {
 type BidUsecase interface {
 	CreateBid(ctx context.Context, bid *entity.Bid) error
 	CheckRoomActive(ctx context.Context, productID string) (bool, error)
+	ValidateBid(ctx context.Context, productID string, price int64, userID uuid.UUID) error
 }
 
 type bidUsecase struct {
@@ -66,4 +78,35 @@ func (uc *bidUsecase) CheckRoomActive(ctx context.Context, productID string) (bo
 		return true, nil
 	}
 	return false, nil
+}
+
+func (uc *bidUsecase) ValidateBid(ctx context.Context, productID string, price int64, userID uuid.UUID) error {
+	priceKey := fmt.Sprintf("product:price:%s", productID)
+	
+	redisData, err := uc.redisClient.HGetAll(ctx, priceKey)
+	if err != nil {
+		return err
+	}
+	
+	if len(redisData) == 0 {
+		return ErrProductNotFound
+	}
+	
+	if redisData["status"] != "active" {
+		return ErrAuctionNotActive
+	}
+	
+	currentPrice, _ := strconv.ParseInt(redisData["current_price"], 10, 64)
+	bidIncrement, _ := strconv.ParseInt(redisData["bid_increment"], 10, 64)
+	sellerID := redisData["seller_id"]
+
+	if price < currentPrice + bidIncrement {
+		return ErrBidPriceTooLow
+	}
+	
+	if sellerID == userID.String() {
+		return ErrSellerCannotBid
+	}
+	
+	return nil
 }

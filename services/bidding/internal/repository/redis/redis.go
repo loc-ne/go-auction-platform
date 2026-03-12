@@ -49,3 +49,7 @@ func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubS
 func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
 	return r.Pool.Get(ctx, key).Result()
 }
+
+func (r *RedisClient) HGetAll(ctx context.Context, key string) (map[string]string, error) {
+	return r.Pool.HGetAll(ctx, key).Result()
+}
