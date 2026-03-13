@@ -38,6 +38,21 @@ services:
       - bidding-postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: shared-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-123456}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "sh", "-c", "redis-cli -a $${REDIS_PASSWORD:-123456} ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     image: golang:1.24-alpine
     container_name: auth-service
@@ -75,6 +90,26 @@ services:
       - REDIS_URL=redis://:123456@shared-redis:6379/0
     depends_on:
       - postgres-product
+      - redis
+
+  bidding-service:
+    image: golang:1.24-alpine
+    container_name: bidding-service
+    working_dir: /app
+    volumes:
+      - ..:/app
+    command: go run services/bidding/cmd/main.go
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-admin}:${DB_PASSWORD:-123456}@postgres-bidding:5432/${DB_NAME:-bidding_db}?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_key}
+      - BIDDING_PORT=${BIDDING_PORT:-8003}
+      - MIGRATION_PATH=file://services/bidding/migrations
+      - REDIS_URL=redis://:123456@shared-redis:6379/0
+    depends_on:
+      - postgres-bidding
+      - redis
 
   api-gateway:  
     image: golang:1.24-alpine
@@ -89,24 +124,25 @@ services:
       - GATEWAY_PORT=${GATEWAY_PORT:-8080}
       - AUTH_SERVICE_URL=http://auth-service:${AUTH_PORT:-8001}
       - PRODUCT_SERVICE_URL=http://product-service:${PRODUCT_PORT:-8002}
+      - BIDDING_SERVICE_URL=http://bidding-service:${BIDDING_PORT:-8003}
     depends_on:
       - auth-service
       - product-service
-  
-  redis:
-    image: redis:7-alpine
-    container_name: shared-redis
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-123456}
+      - bidding-service
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "sh", "-c", "redis-cli -a $${REDIS_PASSWORD:-123456} ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - "5050:80"
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - postgres-product
+      - postgres-bidding
 
 volumes:
   auth-postgres-data:
