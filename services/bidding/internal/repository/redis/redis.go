@@ -70,4 +70,8 @@ func (r *RedisClient) IncrViewerCount(ctx context.Context, roomID string) (int64
 
 func (r *RedisClient) DecrViewerCount(ctx context.Context, roomID string) (int64, error) {
 	return r.Pool.Decr(ctx, "viewer_count:" + roomID).Result()
+}
+
+func (r *RedisClient) GetBidHistory(ctx context.Context, productID string, limit int64) ([]string, error) {
+	return r.Pool.LRange(ctx, "bid_history:"+productID, 0, limit-1).Result()
 }	

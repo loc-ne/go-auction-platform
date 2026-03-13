@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"fmt"
 	"hash/maphash"
 	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
 )
@@ -81,12 +82,30 @@ func (s *Shard) Run() {
 				s.rooms[client.roomId] = room
 			}
 			room.AddClient(client)
+			
 			viewerCount, _ := s.redisClient.IncrViewerCount(context.Background(), client.roomId)
 			room.Broadcast(Message{
 				RoomID: client.roomId,
 				Action: "viewer_count",
 				Payload: viewerCount,
 			})
+
+			priceKey := fmt.Sprintf("product:price:%s", client.roomId)
+			auctionState, _ := s.redisClient.HGetAll(context.Background(), priceKey)
+			bidHistory, _ := s.redisClient.GetBidHistory(context.Background(), client.roomId, 10)
+
+			client.send <- Message{
+				RoomID: client.roomId,
+				Action: "room_state",
+				Payload: map[string]interface{}{
+					"current_price": auctionState["current_price"],
+					"bid_increment": auctionState["bid_increment"],
+					"status":        auctionState["status"],
+					"end_time":      auctionState["end_time"],
+					"viewer_count":  viewerCount,
+					"bid_history":   bidHistory,
+				},
+			}
 
 		case client := <-s.unregister:
 			if room, ok := s.rooms[client.roomId]; ok {

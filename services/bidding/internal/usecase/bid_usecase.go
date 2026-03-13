@@ -18,6 +18,7 @@ var (
 	ErrBidPriceTooLow   = errors.New("bid price must be greater than current price + bid increment")
 	ErrSellerCannotBid  = errors.New("seller cannot bid on their own product")
 	ErrAuctionNotActive = errors.New("auction is not currently active")
+	ErrAuctionEnded     = errors.New("auction has ended")
 )
 
 type BidMessage struct {
@@ -127,6 +128,11 @@ func (uc *bidUsecase) ValidateBid(ctx context.Context, productID string, price i
 	
 	if sellerID == userID.String() {
 		return ErrSellerCannotBid
+	}
+
+	endTimeUnix, _ := strconv.ParseInt(redisData["end_time"], 10, 64)
+	if time.Now().Unix() >= endTimeUnix {
+    return ErrAuctionEnded 
 	}
 	
 	return nil

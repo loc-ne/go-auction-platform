@@ -15,6 +15,7 @@ type RedisRepository interface {
 	Publish(ctx context.Context, channel string, payload interface{}) error
 	Subscribe(ctx context.Context, channel string) *redis.PubSub
 	SetProductInitialState(ctx context.Context, product *entity.Product, ttl time.Duration) error
+	UpdateCurrentPrice(ctx context.Context, productID string, currentPrice int64) error
 	UpdateHotRanking(ctx context.Context, productID string, score float64) error
 	GetHotRanking(ctx context.Context, limit int64) ([]string, error)
 	Close() error
@@ -66,6 +67,7 @@ func (r *redisRepo) SetProductInitialState(ctx context.Context, product *entity.
 		"bid_increment": product.BidIncrement,
 		"seller_id":     product.SellerID.String(),
 		"status":        "active",
+		"end_time":      product.EndAt.Unix(),
 	}
 
 	pipe.HSet(ctx, priceKey, fields)

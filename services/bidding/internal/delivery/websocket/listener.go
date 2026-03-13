@@ -17,9 +17,9 @@ func StartRedisListener(ctx context.Context, hub *Hub, redisClient *redis.RedisC
     for msg := range sub.Channel() {
         go func(payload string) {
             var event struct {
-                UserID string  `json:"user_id"`
-                ProductID string  `json:"product_id"`
-                Amount    int64   `json:"price"` 
+                UserID    string `json:"user_id"`
+                ProductID string `json:"product_id"`
+                Amount    int64  `json:"price"` 
             }
 
             if err := json.Unmarshal([]byte(payload), &event); err != nil {
@@ -27,16 +27,17 @@ func StartRedisListener(ctx context.Context, hub *Hub, redisClient *redis.RedisC
                 return
             }
 
-            msg := Message{
-                RoomID:  event.ProductID,
-                UserID:  event.UserID,
-                Action:  "bid_created",
-                Payload: event.Amount,
-            }
+            bidHistory, _ := redisClient.GetBidHistory(ctx, event.ProductID, 10)
 
-            hub.Broadcast(msg)
-
-            
+            hub.Broadcast(Message{
+                RoomID: event.ProductID,
+                UserID: event.UserID,
+                Action: "new_bid",
+                Payload: map[string]interface{}{
+                    "price":       event.Amount,
+                    "bid_history": bidHistory,
+                },
+            })
         }(msg.Payload)
     }
 }
