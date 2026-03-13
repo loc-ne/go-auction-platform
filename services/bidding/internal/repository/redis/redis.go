@@ -62,3 +62,12 @@ func (r *RedisClient) PushAndTrimBid(ctx context.Context, productID string, bidJ
     _, err := pipe.Exec(ctx)
     return err
 }
+
+// xử lý ttl
+func (r *RedisClient) IncrViewerCount(ctx context.Context, roomID string) (int64, error) {
+	return r.Pool.Incr(ctx, "viewer_count:" + roomID).Result()
+}
+
+func (r *RedisClient) DecrViewerCount(ctx context.Context, roomID string) (int64, error) {
+	return r.Pool.Decr(ctx, "viewer_count:" + roomID).Result()
+}	

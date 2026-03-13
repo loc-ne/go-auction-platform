@@ -1,7 +1,9 @@
 package websocket
 
 import (
+	"context"
 	"hash/maphash"
+	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
 )
 
 type Message struct {
@@ -25,19 +27,21 @@ type Hub struct {
 
 type Shard struct {
 	rooms map[string]*Room
+	redisClient *redis.RedisClient
 
 	register   chan *Client
 	unregister chan *Client
 	broadcast  chan Message
 }
 
-func NewHub() *Hub {
+func NewHub(redisClient *redis.RedisClient) *Hub {
 	h := &Hub{
 		shards: make([]*Shard, 16),
 	}
 	for i := 0; i < 16; i++ {
 		h.shards[i] = &Shard{
 			rooms:      make(map[string]*Room),
+			redisClient: redisClient,
 			register:   make(chan *Client),
 			unregister: make(chan *Client),
 			broadcast:  make(chan Message),
@@ -77,6 +81,12 @@ func (s *Shard) Run() {
 				s.rooms[client.roomId] = room
 			}
 			room.AddClient(client)
+			viewerCount, _ := s.redisClient.IncrViewerCount(context.Background(), client.roomId)
+			room.Broadcast(Message{
+				RoomID: client.roomId,
+				Action: "viewer_count",
+				Payload: viewerCount,
+			})
 
 		case client := <-s.unregister:
 			if room, ok := s.rooms[client.roomId]; ok {
@@ -85,6 +95,13 @@ func (s *Shard) Run() {
 				
 				if len(room.clients) == 0 {
 					delete(s.rooms, client.roomId)
+				} else {
+					viewerCount, _ := s.redisClient.DecrViewerCount(context.Background(), client.roomId)
+					room.Broadcast(Message{
+						RoomID: client.roomId,
+						Action: "viewer_count",
+						Payload: viewerCount,
+					})
 				}
 			}
 		case msg := <-s.broadcast:

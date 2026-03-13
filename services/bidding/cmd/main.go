@@ -41,7 +41,7 @@ func main() {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	authMiddleware := middleware.AuthMiddleware(jwtSecret)
 
-	hub := websocket.NewHub()
+	hub := websocket.NewHub(redisClient)
 	wsHandler := websocket.NewWebsocketBid(bidUsecase, hub)
 	
 	http.NewBidHandler(router, bidUsecase, authMiddleware)
