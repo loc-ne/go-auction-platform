@@ -12,14 +12,16 @@ import (
 type JWTClaims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
+	FullName string `json:"full_name"`
 	jwt.RegisteredClaims
 }
 
-func GenerateTokens(ctx context.Context, userID string, email string, jwtSecret string) (string, string, error) {
+func GenerateTokens(ctx context.Context, userID string, email string, fullName string, jwtSecret string) (string, string, error) {
 	secret := []byte(jwtSecret)
 	claims := JWTClaims{
 		UserID: userID,
 		Email:  email,
+		FullName: fullName,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID, 
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),

@@ -49,6 +49,7 @@ func (h *BidHandler) CreateBid(c *gin.Context) {
 		return
 	}
 
+	// update later (race condition)
 	if err := h.usecase.ValidateBid(c.Request.Context(), req.ProductID.String(), req.Amount, userID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -59,8 +60,13 @@ func (h *BidHandler) CreateBid(c *gin.Context) {
 		UserID:    userID,
 		Amount:    req.Amount,
 	}
-
-	if err := h.usecase.CreateBid(c.Request.Context(), &bid); err != nil {
+	
+	fullNameVal, _ := c.Get("full_name")
+	bidderName, _ := fullNameVal.(string)
+	if bidderName == "" {
+		bidderName = "Anonymous"
+	}
+	if err := h.usecase.CreateBid(c.Request.Context(), &bid, bidderName); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

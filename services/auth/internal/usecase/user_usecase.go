@@ -74,7 +74,7 @@ func (u *userUsecase) Login(ctx context.Context, email string, password string) 
 		return nil, "", "", ErrInvalidCredentials
 	}
 	
-	accessToken, refreshToken, err := pkg.GenerateTokens(ctx, user.ID.String(), user.Email, u.jwtSecret)
+	accessToken, refreshToken, err := pkg.GenerateTokens(ctx, user.ID.String(), user.Email, user.FullName, u.jwtSecret)
     if err != nil {
         return nil, "", "", err
     }
@@ -99,5 +99,5 @@ func (u *userUsecase) GetUserByID(ctx context.Context, id uuid.UUID) (*entity.Us
 }
 
 func (u *userUsecase) RefreshTokens(ctx context.Context, user *entity.User) (string, string, error) {
-    return pkg.GenerateTokens(ctx, user.ID.String(), user.Email, u.jwtSecret)
+    return pkg.GenerateTokens(ctx, user.ID.String(), user.Email, user.FullName, u.jwtSecret)
 }

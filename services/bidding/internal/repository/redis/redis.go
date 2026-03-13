@@ -53,3 +53,12 @@ func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
 func (r *RedisClient) HGetAll(ctx context.Context, key string) (map[string]string, error) {
 	return r.Pool.HGetAll(ctx, key).Result()
 }
+
+func (r *RedisClient) PushAndTrimBid(ctx context.Context, productID string, bidJSON string, limit int64) error {
+    key := "bid_history:" + productID
+    pipe := r.Pool.Pipeline()
+    pipe.LPush(ctx, key, bidJSON)
+    pipe.LTrim(ctx, key, 0, limit-1)
+    _, err := pipe.Exec(ctx)
+    return err
+}

@@ -80,6 +80,11 @@ func (r *redisRepo) SetProductInitialState(ctx context.Context, product *entity.
 	return err
 }
 
+func (r *redisRepo) UpdateCurrentPrice(ctx context.Context, productID string, currentPrice int64) error {
+	priceKey := fmt.Sprintf("product:price:%s", productID)
+	return r.pool.HSet(ctx, priceKey, "current_price", currentPrice).Err()
+}
+
 func (r *redisRepo) UpdateHotRanking(ctx context.Context, productID string, score float64) error {
 	return r.pool.ZAdd(ctx, "hot_ranking", redis.Z{
 		Score:  score,

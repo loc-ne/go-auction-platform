@@ -69,7 +69,11 @@ func (u *productUsecase) GetByID(ctx context.Context, id string) (*entity.Produc
 }
 
 func (u *productUsecase) UpdateCurrentPrice(ctx context.Context, productID uuid.UUID, currentPrice int64) error {
-	return u.repo.UpdateCurrentPrice(ctx, productID, currentPrice)
+	err := u.redisClient.UpdateCurrentPrice(ctx, productID.String(), currentPrice)
+	if err != nil {
+		log.Printf("Redis update failed for product %s: %v", productID.String(), err)
+	}
+	return u.repo.UpdateCurrentPrice(ctx, productID, currentPrice)	
 }
 
 func (u *productUsecase) HandleFavorite(ctx context.Context, userID, productID uuid.UUID) (bool, error) {

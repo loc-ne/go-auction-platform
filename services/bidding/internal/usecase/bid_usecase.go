@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/loc-ne/go-auction/services/bidding/internal/entity"
@@ -24,12 +25,18 @@ type BidMessage struct {
 	Price     int64   `json:"price"`
 }
 
+type BidHistory struct {
+	Price     int64   `json:"price"`
+	BidderName string  `json:"bidder_name"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type BidRepository interface {
     Create(ctx context.Context, bid *entity.Bid) error
 }
 
 type BidUsecase interface {
-	CreateBid(ctx context.Context, bid *entity.Bid) error
+	CreateBid(ctx context.Context, bid *entity.Bid, bidderName string) error
 	CheckRoomActive(ctx context.Context, productID string) (bool, error)
 	ValidateBid(ctx context.Context, productID string, price int64, userID uuid.UUID) error
 }
@@ -46,7 +53,7 @@ func NewBidUsecase(r BidRepository, red *redis.RedisClient) BidUsecase {
     }
 }
 
-func (u *bidUsecase) CreateBid(ctx context.Context, bid *entity.Bid) error {
+func (u *bidUsecase) CreateBid(ctx context.Context, bid *entity.Bid, bidderName string) error {
 	err := u.repo.Create(ctx, bid)
 	if err != nil {
 		return err
@@ -63,6 +70,18 @@ func (u *bidUsecase) CreateBid(ctx context.Context, bid *entity.Bid) error {
         return err
     }
 	_ = u.redisClient.Publish(ctx, channelName, payload)
+
+	bidHistory := BidHistory{
+		Price:     bid.Amount,
+		BidderName:    bidderName,
+		CreatedAt: bid.CreatedAt,
+	}
+	
+	bidJSON, err := json.Marshal(bidHistory)
+	if err != nil {
+		return err
+	}
+	_ = u.redisClient.PushAndTrimBid(ctx, bid.ProductID.String(), string(bidJSON), 10)
 
 	return nil
 }
