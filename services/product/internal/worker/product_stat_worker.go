@@ -35,6 +35,7 @@ func (w *ProductStatWorker) Start(ctx context.Context) {
     for msg := range sub.Channel() {
         go func(payload string) {
             var event struct {
+                UserID string  `json:"user_id"`
                 ProductID string  `json:"product_id"`
                 Amount    int64   `json:"price"` 
             }

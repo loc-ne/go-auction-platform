@@ -46,6 +46,8 @@ func main() {
 	
 	http.NewBidHandler(router, bidUsecase, authMiddleware)
 
+	go websocket.StartRedisListener(context.Background(), hub, redisClient)	
+
 	router.GET("/ws/bidding", authMiddleware, wsHandler.ServeWs)
 
 	port := os.Getenv("BIDDING_PORT")

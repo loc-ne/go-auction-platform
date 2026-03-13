@@ -21,6 +21,7 @@ var (
 )
 
 type BidMessage struct {
+	UserID string  `json:"user_id"`
 	ProductID string  `json:"product_id"`
 	Price     int64   `json:"price"`
 }
@@ -61,8 +62,9 @@ func (u *bidUsecase) CreateBid(ctx context.Context, bid *entity.Bid, bidderName 
 
 	channelName := "bid_created"
 	msg := BidMessage{
-	ProductID: bid.ProductID.String(),
-	Price:     bid.Amount,
+		UserID: bid.UserID.String(),
+		ProductID: bid.ProductID.String(),
+		Price:     bid.Amount,
     }
 
 	payload, err := json.Marshal(msg)
