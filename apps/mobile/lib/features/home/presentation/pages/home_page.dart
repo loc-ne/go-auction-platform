@@ -7,39 +7,8 @@ import '../widgets/product_card.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/auth_section.dart';
 import '../../../product/presentation/pages/submit_product_page.dart';
-
-final List<Map<String, dynamic>> mockTrending = [
-  {
-    "id": "uuid-1",
-    "name": "Rolex Daytona Panda 116500LN",
-    "description": "Tinh hoa đồng hồ cơ học Thụy Sỹ. Tình trạng xuất sắc 99%, hộp sổ thẻ.",
-    "current_price": 850000000,
-    "image_url": "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80&w=800",
-    "end_at": DateTime.now().add(const Duration(hours: 2)),
-    "stats": {"view_count": "24.5k", "favorite_count": "5.1k", "bid_count": 342},
-    "rank": 1
-  },
-  {
-    "id": "uuid-2",
-    "name": "Air Jordan 1 Chicago 2015",
-    "description": "Huyền thoại streetwear. Size 42, Fullbox, deadstock.",
-    "current_price": 25000000,
-    "image_url": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&q=80&w=800",
-    "end_at": DateTime.now().add(const Duration(hours: 5)),
-    "stats": {"view_count": "12.4k", "favorite_count": "3.2k", "bid_count": 128},
-    "rank": 2
-  },
-  {
-    "id": "uuid-3",
-    "name": "Leica M6 TTL Black",
-    "description": "Máy ảnh film Leica huyền thoại. Kèm ống kính 35mm.",
-    "current_price": 120000000,
-    "image_url": "https://images.unsplash.com/photo-1516961642265-531546e84af2?auto=format&fit=crop&q=80&w=800",
-    "end_at": DateTime.now().add(const Duration(hours: 12)),
-    "stats": {"view_count": "8.9k", "favorite_count": "2.1k", "bid_count": 85},
-    "rank": 3
-  },
-];
+import '../../../product/data/repositories/product_repository.dart';
+import '../../../product/data/models/product_model.dart';
 
 String formatCurrency(int amount) {
   final format = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -56,6 +25,51 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
 
+  // State cho trending
+  List<Product> _trendingProducts = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrending();
+  }
+
+  Future<void> _loadTrending() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final repo = context.read<ProductRepository>();
+      final products = await repo.getTrendingProducts();
+
+      setState(() {
+        _trendingProducts = products;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatDuration(Duration d) {
+    if (d == Duration.zero) return 'Đã kết thúc';
+    if (d.inHours >= 24) {
+      final days = d.inDays;
+      return '$days ngày';
+    }
+    final hours = d.inHours.toString().padLeft(2, '0');
+    final minutes = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final seconds = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,18 +77,46 @@ class _HomePageState extends State<HomePage> {
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AuthSection(),
-                _buildHeroBanner(),
-                const SizedBox(height: 32),
-                _buildTrendingSection(),
-                const SizedBox(height: 100), 
-              ],
+          if (_isLoading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_error != null)
+            SliverFillRemaining(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.wifiOff, size: 48, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadTrending,
+                      icon: const Icon(LucideIcons.refreshCw, size: 16),
+                      label: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AuthSection(),
+                  if (_trendingProducts.isNotEmpty) _buildHeroBanner(),
+                  const SizedBox(height: 32),
+                  if (_trendingProducts.length > 1) _buildTrendingSection(),
+                  const SizedBox(height: 100), 
+                ],
+              ),
             ),
-          ),
         ],
       ),
       extendBody: true, 
@@ -123,40 +165,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildHeroBanner() {
-    final top1 = mockTrending.first;
+    final top1 = _trendingProducts.first;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  border: Border.all(color: Colors.orange.shade200),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.trendingUp, size: 14, color: Colors.orange.shade700),
-                    const SizedBox(width: 4),
-                    Text(
-                      'GIÁ ĐANG SỐT',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 16),
 
           Stack(
@@ -175,10 +190,12 @@ class _HomePageState extends State<HomePage> {
                       offset: const Offset(0, 10),
                     ),
                   ],
-                  image: DecorationImage(
-                    image: NetworkImage(top1['image_url']),
-                    fit: BoxFit.cover,
-                  ),
+                  image: top1.thumbnailUrl.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(top1.thumbnailUrl),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
               ),
               Positioned(
@@ -201,7 +218,7 @@ class _HomePageState extends State<HomePage> {
                       const Icon(LucideIcons.crown, size: 14, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        'RANK 01',
+                        'TOP 01',
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -227,7 +244,7 @@ class _HomePageState extends State<HomePage> {
                       const Icon(LucideIcons.clock, size: 14, color: Colors.deepOrange),
                       const SizedBox(width: 6),
                       Text(
-                        '02:15:30',
+                        _formatDuration(top1.timeRemaining),
                         style: GoogleFonts.jetBrainsMono(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -244,7 +261,7 @@ class _HomePageState extends State<HomePage> {
 
           // Tên SP
           Text(
-            top1['name'],
+            top1.name,
             style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w900,
@@ -254,17 +271,16 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 8),
           
-          // Row Stats
-          Row(
-            children: [
-              Icon(LucideIcons.eye, size: 14, color: Colors.grey.shade500),
-              const SizedBox(width: 4),
-              Text(top1['stats']['view_count'], style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-              const SizedBox(width: 16),
-              Icon(LucideIcons.heart, size: 14, color: Colors.red.shade400),
-              const SizedBox(width: 4),
-              Text(top1['stats']['favorite_count'], style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)),
-            ],
+          // Description
+          Text(
+            top1.description,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade500,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 20),
 
@@ -282,7 +298,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      formatCurrency(top1['current_price']),
+                      formatCurrency(top1.currentPrice),
                       style: GoogleFonts.jetBrainsMono(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -297,7 +313,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
           
-          // Nút Đấu Giá vuốt / bấm nảy
+          // Nút Đấu Giá
           SizedBox(
             width: double.infinity,
             height: 56,
@@ -334,7 +350,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTrendingSection() {
-    final list = mockTrending.skip(1).toList();
+    final list = _trendingProducts.skip(1).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,7 +404,7 @@ class _HomePageState extends State<HomePage> {
             itemCount: list.length,
             itemBuilder: (context, index) {
               final item = list[index];
-              return ProductCard(item: item);
+              return ProductCard(item: item, rank: index + 2);
             },
           ),
         ),

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../models/product_model.dart';
 
 class ProductRepository {
   final String baseUrl;
@@ -94,6 +95,26 @@ class ProductRepository {
       throw 'Kết nối bị quá hạn';
     } catch (e) {
       throw e.toString();
+    }
+  }
+
+  Future<List<Product>> getTrendingProducts({int limit = 10}) async {
+    try {
+      final response = await client.get(
+        Uri.parse('$baseUrl/products/trending?limit=$limit'),
+      ).timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> list = data['data'] ?? [];
+        return list.map((json) => Product.fromJson(json)).toList();
+      } else {
+        final error = jsonDecode(response.body);
+        throw error['message'] ?? 'Lỗi khi tải sản phẩm trending';
+      }
+    } on SocketException {
+      throw 'Không thể kết nối đến máy chủ';
+    } on TimeoutException {
+      throw 'Kết nối bị quá hạn';
     }
   }
 }

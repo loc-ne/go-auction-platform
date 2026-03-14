@@ -47,11 +47,23 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+      - ./seed_redis.sh:/data/seed_redis.sh
     healthcheck:
       test: ["CMD", "sh", "-c", "redis-cli -a $${REDIS_PASSWORD:-123456} ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis-seed:
+    image: redis:7-alpine
+    container_name: redis-seed
+    volumes:
+      - ./seed_redis.sh:/seed_redis.sh
+    entrypoint: ["sh", "/seed_redis.sh"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: "no"
 
   auth-service:
     image: golang:1.24-alpine

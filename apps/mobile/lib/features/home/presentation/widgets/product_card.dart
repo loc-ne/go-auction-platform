@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import '../../../product/data/models/product_model.dart';
 
 class ProductCard extends StatelessWidget {
-  final Map<String, dynamic> item;
+  final Product item;
+  final int rank;
 
-  const ProductCard({super.key, required this.item});
+  const ProductCard({super.key, required this.item, this.rank = 0});
 
   String formatCurrency(int amount) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -32,29 +34,32 @@ class ProductCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              image: DecorationImage(
-                image: NetworkImage(item['image_url']),
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.05), BlendMode.darken),
-              ),
+              image: item.thumbnailUrl.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(item.thumbnailUrl),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.05), BlendMode.darken),
+                    )
+                  : null,
             ),
             child: Stack(
               children: [
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'TOP 0${item['rank']}',
-                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold),
+                if (rank > 0)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'TOP ${rank.toString().padLeft(2, '0')}',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
@@ -66,7 +71,7 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item['name'],
+                    item.name,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -76,16 +81,14 @@ class ProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(LucideIcons.eye, size: 12, color: Colors.grey.shade400),
-                      const SizedBox(width: 4),
-                      Text(item['stats']['view_count'], style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade500)),
-                      const SizedBox(width: 12),
-                      Icon(LucideIcons.heart, size: 12, color: Colors.red.shade400),
-                      const SizedBox(width: 4),
-                      Text(item['stats']['favorite_count'], style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade500)),
-                    ],
+                  Text(
+                    item.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Colors.grey.shade500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const Spacer(),
                   Row(
@@ -97,16 +100,23 @@ class ProductCard extends StatelessWidget {
                         children: [
                           Text('GIÁ HIỆN TẠI', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey.shade400)),
                           Text(
-                            formatCurrency(item['current_price']),
+                            formatCurrency(item.currentPrice),
                             style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green.shade700),
                           ),
                         ],
                       ),
                       Row(
                         children: [
-                          Text('${item['stats']['bid_count']}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                          const SizedBox(width: 2),
-                          Icon(LucideIcons.gavel, size: 12, color: Colors.grey.shade500),
+                          Icon(LucideIcons.clock, size: 12, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.isActive ? 'Đang diễn ra' : 'Đã kết thúc',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: item.isActive ? Colors.green.shade600 : Colors.red.shade400,
+                            ),
+                          ),
                         ],
                       ),
                     ],
