@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hash/maphash"
+	"encoding/json"
 	"github.com/loc-ne/go-auction/services/bidding/internal/repository/redis"
 )
 
@@ -12,6 +13,12 @@ type Message struct {
 	UserID  string      `json:"userId"`
 	Action  string      `json:"action"`
 	Payload interface{} `json:"payload"`
+}
+
+type BidHistory struct {
+	Price     int64  `json:"price"`
+	BidderName string `json:"bidder_name"`
+	CreatedAt  string `json:"created_at"`
 }
 
 var seed = maphash.MakeSeed()
@@ -93,6 +100,14 @@ func (s *Shard) Run() {
 			priceKey := fmt.Sprintf("product:price:%s", client.roomId)
 			auctionState, _ := s.redisClient.HGetAll(context.Background(), priceKey)
 			bidHistory, _ := s.redisClient.GetBidHistory(context.Background(), client.roomId, 10)
+			bids := make([]BidHistory, 0)
+
+			for _, item := range bidHistory {
+				var bid BidHistory
+				if err := json.Unmarshal([]byte(item), &bid); err == nil {
+					bids = append(bids, bid)
+				}
+			}
 
 			client.send <- Message{
 				RoomID: client.roomId,
@@ -103,7 +118,7 @@ func (s *Shard) Run() {
 					"status":        auctionState["status"],
 					"end_time":      auctionState["end_time"],
 					"viewer_count":  viewerCount,
-					"bid_history":   bidHistory,
+					"bid_history":   bids,
 				},
 			}
 

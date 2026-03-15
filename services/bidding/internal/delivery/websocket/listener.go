@@ -28,6 +28,13 @@ func StartRedisListener(ctx context.Context, hub *Hub, redisClient *redis.RedisC
             }
 
             bidHistory, _ := redisClient.GetBidHistory(ctx, event.ProductID, 10)
+			bids := make([]BidHistory, 0)
+			for _, item := range bidHistory {
+				var bid BidHistory
+				if err := json.Unmarshal([]byte(item), &bid); err == nil {
+					bids = append(bids, bid)
+				}
+			}
 
             hub.Broadcast(Message{
                 RoomID: event.ProductID,
@@ -35,7 +42,7 @@ func StartRedisListener(ctx context.Context, hub *Hub, redisClient *redis.RedisC
                 Action: "new_bid",
                 Payload: map[string]interface{}{
                     "price":       event.Amount,
-                    "bid_history": bidHistory,
+                    "bid_history": bids,
                 },
             })
         }(msg.Payload)
